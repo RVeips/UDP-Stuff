@@ -40,22 +40,17 @@ else()
     target_compile_options(UDP-Stuff PRIVATE "-fdiagnostics-color=always" "-Wall" "-Wextra" "-Werror")
 endif()
 
-FetchContent_Declare(
-    Lua
-    GIT_REPOSITORY
-    https://github.com/CFXS/Lua-CMake.git
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(Lua)
 
-set(LUABRIDGE_TESTING OFF CACHE BOOL "LuaBridge tests" FORCE)
 FetchContent_Declare(
-    lib_LuaBridge
+    cfxs_framework
     GIT_REPOSITORY
-    https://github.com/vinniefalco/LuaBridge.git
+    https://github.com/CFXS/CFXS-Framework.git
     GIT_SHALLOW TRUE
 )
-FetchContent_MakeAvailable(lib_LuaBridge)
+FetchContent_MakeAvailable(cfxs_framework)
+target_include_directories(UDP-Stuff PUBLIC "${cfxs_framework_SOURCE_DIR}/include")
+target_include_directories(UDP-Stuff PUBLIC "${cfxs_framework_SOURCE_DIR}/modules/sACN")
+target_sources(UDP-Stuff PRIVATE "${cfxs_framework_SOURCE_DIR}/modules/sACN/CFXS/sACN.cpp")
 
 FetchContent_Declare(
     argparse
@@ -80,8 +75,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lib_spdlog)
 
 target_link_libraries(UDP-Stuff PRIVATE
-    lua_static
-    LuaBridge
     argparse
     spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>
 )

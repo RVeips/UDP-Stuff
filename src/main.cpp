@@ -17,11 +17,12 @@
 #include <unistd.h> /* Needed for close() */
 #include <pthread.h>
 #endif
+#include <CFXS/IPv4.hpp>
 
 int g_sacn_socket;
 
 // set up UDP socket to send data to 2.255.255.255 on UDP port 5568
-void sACN_CreateSocket() {
+void sacn_create_socket() {
     // Create a UDP socket
     g_sacn_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (g_sacn_socket < 0) {
@@ -37,39 +38,43 @@ void sACN_CreateSocket() {
     }
 }
 
-void sACN_CloseSocket() {
+void sacn_close_socket() {
     auto status = shutdown(g_sacn_socket, SHUT_RDWR);
     if (status == 0) {
         status = close(g_sacn_socket);
     }
 }
 
-bool sACN_SendPacket(void *data, int len, uint32_t destination) {
-    struct sockaddr_in addr;
+bool sacn_send_packet(void *data, int len, CFXS::IPv4 destination_address) {
+    sockaddr_in addr;
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(5568);
-    addr.sin_addr.s_addr = htonl(destination);
-    return sendto(g_sacn_socket, data, len, 0, (struct sockaddr *)&addr, sizeof(addr)) == 0;
+    addr.sin_addr.s_addr = destination_address.get_value();
+    return sendto(g_sacn_socket, data, len, 0, (sockaddr *)&addr, sizeof(addr)) == 0;
 }
 
-void sACN_Generator() {
-    sACN_CreateSocket();
+void sacn_generator() {
+    sacn_create_socket();
 
     uint8_t data[1024];
+    int n = 0;
     while (1 < 2) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         for (int i = 0; i < 1024; i++) {
             data[i] = 0;
         }
-        sACN_SendPacket(data, sizeof(data), 0x02FFFFFF);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        sacn_send_packet(data, sizeof(data), "2.255.255.255");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         for (int i = 0; i < 1024; i++) {
-            data[i] = 0xFF;
+            data[i] = (i - (0xA8 - 42)) == n ? 0xFF : 0x00;
         }
-        sACN_SendPacket(data, sizeof(data), 0x02FFFFFF);
+        n++;
+        sacn_send_packet(data, sizeof(data), "2.255.255.255");
+        if (n == 24)
+            n = 0;
     }
 
-    sACN_CloseSocket();
+    sacn_close_socket();
 }
 
 int main(int argc, char **argv) {
@@ -107,7 +112,7 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    sACN_Generator();
+    sacn_generator();
 
     return 0;
 }
